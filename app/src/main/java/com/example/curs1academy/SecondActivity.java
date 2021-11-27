@@ -2,11 +2,16 @@ package com.example.curs1academy;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -17,6 +22,10 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,8 +34,14 @@ public class SecondActivity extends AppCompatActivity {
     public static final String NAME_KEY = "NUME";
     public static final int REQUEST_CODE=100;
     public static final int RESULT_CODE=200;
+
     private Button button;
     private RecyclerView listView;
+
+    ArrayList<NewsArticle> list=new ArrayList<>();
+    NewsRecyclerViewAdapter adapter=new NewsRecyclerViewAdapter(list);
+
+
     
     public static final String TAG=SecondActivity.class.getSimpleName();
 
@@ -43,6 +58,11 @@ public class SecondActivity extends AppCompatActivity {
         setUpViews();
 
         setUpToolbar();
+
+        setUpDRawer();
+
+        Intent intent=new Intent(this, FetchNetworkDataIntentService.class);
+        startService(intent);
 
     }
 
@@ -103,9 +123,9 @@ public class SecondActivity extends AppCompatActivity {
 
     private void setUpArticleList(){
         //List<NewsArticle> list=getArticleData();
-        ArrayList<NewsArticle> list=new ArrayList<>();
+
         list.addAll(getArticleData());
-        NewsRecyclerViewAdapter adapter=new NewsRecyclerViewAdapter(list);
+
         listView.setAdapter(adapter);
 
         listView.setLayoutManager(new LinearLayoutManager(this));
@@ -144,16 +164,43 @@ public class SecondActivity extends AppCompatActivity {
         Toolbar toolbar=findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-//        ActionBar actionBar=getSupportActionBar();
-//        actionBar.setHomeButtonEnabled(true);
-//        actionBar.setDisplayHomeAsUpEnabled(true);
+        ActionBar actionBar=getSupportActionBar();
+        actionBar.setHomeButtonEnabled(false);
+        actionBar.setDisplayHomeAsUpEnabled(true);
+
     }
 
-//    @Override
-//    public boolean onSupportNavigateUp() {
-//        onBackPressed();
-//        return super.onSupportNavigateUp();
-//    }
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        return super.onSupportNavigateUp();
+    }
 
+    private void setUpDRawer(){
+        DrawerLayout drawerLayout=findViewById(R.id.dl_activity_second);
+        ActionBarDrawerToggle actionBarDrawerToggle=new ActionBarDrawerToggle(this,
+                drawerLayout,R.string.app_name, R.string.app_name);
+        actionBarDrawerToggle.setDrawerIndicatorEnabled(true);
+        drawerLayout.addDrawerListener(actionBarDrawerToggle);
+        actionBarDrawerToggle.syncState();
+    }
 
+    @Override
+    protected void onStart() {
+        EventBus.getDefault().register(this);
+        super.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        EventBus.getDefault().unregister(this);
+        super.onStop();
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void processArticle(NewArticlesEvent newArticlesEvent){
+        list.clear();
+        list.addAll(newArticlesEvent.newsArticleList);
+        adapter.notifyDataSetChanged();
+    }
 }

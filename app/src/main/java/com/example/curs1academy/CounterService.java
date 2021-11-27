@@ -6,11 +6,12 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 public class CounterService extends Service {
     public static final String TAG=CounterService.class.getName();
     public static final String ACTION_COUNT="Orice";
-    public CounterService() {
-    }
+    public CounterService() { }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -32,7 +33,7 @@ public class CounterService extends Service {
     }
 
     public void count(){
-        for(int i=0; i<50; i++){
+        for(int i=0; i<5; i++){
 
             try {
                 Thread.sleep(1000);
@@ -41,6 +42,7 @@ public class CounterService extends Service {
                 e.printStackTrace();
             }
         }
+        LocalBroadcastManager.getInstance(MobileActivityApplication.getAppContext()).sendBroadcast(new Intent(MainActivity.ACTION_TIME_IS_UP));
     }
 
     @Override

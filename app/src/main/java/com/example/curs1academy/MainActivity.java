@@ -5,9 +5,14 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProviders;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.util.Log;
@@ -17,15 +22,39 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.io.IOException;
+import java.lang.ref.WeakReference;
+import java.util.List;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
+    public static final String ACTION_TIME_IS_UP="Time's up";
     private  final String TAG="MainActivity";
     private EditText editTextName;
     private EditText editTextPassword;
+    private BroadcastReceiver receiver=new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if(intent.getAction()==ACTION_TIME_IS_UP){
+                Toast.makeText(MainActivity.this,"Timpu s-a terminat",Toast.LENGTH_LONG).show();
+            }
+        }
+    };
+
+
 
     MainActivityViewModel viewModel;
 
     private int counter;
+
+    private HackerNewsAPI newsAPI=new HackerNewsAPI();
 
 
     @Override
@@ -46,6 +75,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Intent serviceIntent=new Intent(this,CounterService.class);
         serviceIntent.setAction(CounterService.ACTION_COUNT);
         startService(serviceIntent);
+
+        //getTopStories();
+
+        new RequestAsyncTask(this).execute();
 
     }
 
@@ -114,11 +147,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         startActivity(intent);
     }
 
-//    @Override
-//    protected void onStart() {
-//        super.onStart();
-//        Log.d(TAG,"OnStart");
-//    }
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.d(TAG,"OnStart");
+        IntentFilter filter=new IntentFilter(ACTION_TIME_IS_UP);
+        LocalBroadcastManager.getInstance(this).registerReceiver(receiver, filter);
+    }
 //
 //    @Override
 //    protected void onResume() {
@@ -132,11 +167,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //        Log.d(TAG,"OnPause");
 //    }
 //
-//    @Override
-//    protected void onStop() {
-//        super.onStop();
-//        Log.d(TAG,"OnStop");
-//    }
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.d(TAG,"OnStop");
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver);
+    }
 //
 //    @Override
 //    protected void onDestroy() {
@@ -144,10 +180,37 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //        Log.d(TAG,"OnDestroy");
 //    }
 
+    public void getTopStories(){
+        newsAPI.getRequestAsync(HackerNewsAPI.TOP_STORIES_ENDPOINT, new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                Log.e(TAG, "Failure on request",e);
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Toast.makeText(MainActivity.this,response.body().string(),Toast.LENGTH_LONG).show();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            }
+        });
+    }
+
 
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
         outState.putInt("counter_key", counter);
         super.onSaveInstanceState(outState);
+    }
+
+    public void refreshContent(List<String> strings){
+        Toast.makeText(MainActivity.this,strings.toString(),Toast.LENGTH_LONG).show();
     }
 }
