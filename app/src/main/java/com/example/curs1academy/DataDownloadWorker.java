@@ -1,15 +1,16 @@
 package com.example.curs1academy;
 
-import android.app.IntentService;
-import android.content.Intent;
+
 import android.content.Context;
-import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.work.Worker;
+import androidx.work.WorkerParameters;
 
 import com.example.curs1academy.repository.ArticleRepository;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import org.greenrobot.eventbus.EventBus;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -18,26 +19,17 @@ import java.util.List;
 
 import okhttp3.Response;
 
-
-public class FetchNetworkDataIntentService extends IntentService {
+public class DataDownloadWorker extends Worker {
 
     private HackerNewsAPI hackerNewsAPI=new HackerNewsAPI();
 
-
-
-    public FetchNetworkDataIntentService(String name){
-        super(name);
+    public DataDownloadWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
+        super(context, workerParams);
     }
 
-    public FetchNetworkDataIntentService() {
-        super("FetchNetworkDataIntentService");
-    }
-
-
+    @NonNull
     @Override
-    protected void onHandleIntent(Intent intent) {
-        Log.d("FetchNetworkDataService",Thread.currentThread().getName());
-        HackerNewsAPI hackerNewsAPI=new HackerNewsAPI();
+    public Result doWork() {
         Response response=hackerNewsAPI.executeGetRequestSync(HackerNewsAPI.TOP_STORIES_ENDPOINT);
 
         Gson gson=new Gson();
@@ -48,8 +40,9 @@ public class FetchNetworkDataIntentService extends IntentService {
             //EventBus.getDefault().post(new NewArticlesEvent(newsArticleList));
             ArticleRepository.getInstance().updateAll(newsArticleList);
         } catch (IOException e) {
-            e.printStackTrace();
+            return Result.retry();
         }
+        return Result.success();
     }
 
     public List<NewsArticle> getArticles(List<String> stringList, int limit){

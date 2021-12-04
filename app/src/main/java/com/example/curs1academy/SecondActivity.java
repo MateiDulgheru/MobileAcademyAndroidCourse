@@ -6,6 +6,8 @@ import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -41,6 +43,8 @@ public class SecondActivity extends AppCompatActivity {
     ArrayList<NewsArticle> list=new ArrayList<>();
     NewsRecyclerViewAdapter adapter=new NewsRecyclerViewAdapter(list);
 
+    SecondActivityViewModel secondActivityViewModel;
+
 
     
     public static final String TAG=SecondActivity.class.getSimpleName();
@@ -61,8 +65,24 @@ public class SecondActivity extends AppCompatActivity {
 
         setUpDRawer();
 
+        setUpSecondViewModel();
+
         Intent intent=new Intent(this, FetchNetworkDataIntentService.class);
         startService(intent);
+
+    }
+
+    private void setUpSecondViewModel(){
+
+        secondActivityViewModel= ViewModelProviders.of(this).get(SecondActivityViewModel.class);
+        secondActivityViewModel.liveData.observe(this, new Observer<List<NewsArticle>>() {
+            @Override
+            public void onChanged(List<NewsArticle> newsArticles) {
+                list.clear();
+                list.addAll(newsArticles);
+                adapter.notifyDataSetChanged();
+            }
+        });
 
     }
 
@@ -187,20 +207,20 @@ public class SecondActivity extends AppCompatActivity {
 
     @Override
     protected void onStart() {
-        EventBus.getDefault().register(this);
+        //EventBus.getDefault().register(this);
         super.onStart();
     }
 
     @Override
     protected void onStop() {
-        EventBus.getDefault().unregister(this);
+        //EventBus.getDefault().unregister(this);
         super.onStop();
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void processArticle(NewArticlesEvent newArticlesEvent){
-        list.clear();
-        list.addAll(newArticlesEvent.newsArticleList);
-        adapter.notifyDataSetChanged();
-    }
+//    @Subscribe(threadMode = ThreadMode.MAIN)
+//    public void processArticle(NewArticlesEvent newArticlesEvent){
+//        list.clear();
+//        list.addAll(newArticlesEvent.newsArticleList);
+//        adapter.notifyDataSetChanged();
+//    }
 }
